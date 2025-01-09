@@ -1,44 +1,66 @@
-#include "Arduino.h"
-
-TaskHandle_t Task0;
-TaskHandle_t Task1;
-
 /****************************************************************
 * Folow Line
 * CESAR School
 * 
 * Line Follower PID with the microcontroller Vespa 
 * from RoboCore and the Pololu's QTR-8RC sensor
+*
+* This project uses the Hit marker Braker function
+* every time it sees a curve marker
 ****************************************************************/
-// Atualização do dia 19 de dezembro de 2024. Código limpo, o turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
+
+
+// Atualização do dia 9 de janeiro de 2025 por Ênio .  Código teve a estratégia de freiar ao ver o marcador lateral separado de outros códigos
+
+
+
+
+#include "Arduino.h"          // Library for the task manager
+#include "BluetoothSerial.h"  // Library for the Buetooth module
+#include <RoboCore_Vespa.h>   // Library for the Vespa microcontroller
+#include <QTRSensors.h>       // Library for the QTR-8A or the QTR-8RC
+
+
+
+// Dual core tasks 
+TaskHandle_t Task0;
+TaskHandle_t Task1;
+
+
+//----------------------- Bluetooth ---------------------
+// Defines Device's Bluetooth name
 #define DEBUG
-#define BT_NAME "N1"
-// Names: Kriz | Vin-a
-
-
+#define BT_NAME "I forgot to set a name"
 #ifdef DEBUG
-#include "BluetoothSerial.h"
 
+// Makes sure bluetooth is working
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run make menuconfig to and enable it
 #endif
 BluetoothSerial SerialBT;  // Bluetooth Serial instance
 #endif
 
-#include <RoboCore_Vespa.h>  // Library for the Vespa microcontroller
-#include <QTRSensors.h>      // Library for the QTR-8A or the QTR-8RC
 
+
+
+//----------------------- Vespa ----------------------
 VespaMotors motor;  // Vespa Motor  Object
 QTRSensors qtr;     // QTR Sensor
+
 
 // Set button and led pins
 const uint8_t PIN_BUTTON = 35;
 const uint8_t PIN_LED = 15;
 const uint8_t PIN_MARKER_SENSOR = 36;
 
+
+
+
+//----------------------- QTR Sensors ----------------------
 //Setup of the module of sensors
 const uint8_t SENSOR_COUNT = 8;       // The number of sensors, which should match the length of the pins array
 uint16_t sensorValues[SENSOR_COUNT];  // An array in which to store the calibrated sensor readings
+
 
 // Maximum line position, considering the amount of sensors.
 const long MAX_POSITION = (SENSOR_COUNT - 1) * 1000;
@@ -49,33 +71,34 @@ unsigned long initialTime;
 
 // Limit value of the margin of error
 int marginError = 20;
-
 bool firstRun = true;
+
+// QTR control for if it is above black
+const bool LINE_BLACK = false;  
+
 
 
 
 //-----------------------Curve Sensor----------------------
 #define SENSOR_PIN 39   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
-// int curveSensorValue = analogRead(SENSOR_PIN);
-int curveCount = 0;
-bool curveSensorWhite = false; 
 
-typedef struct curveController{
-  int velocity;
-  int breakerStrength;
-  int timeBreaking;
+int curveCount = 0;                 // Curve counter
+bool curveSensorWhite = false;      // if the sensor is above the marker
+
+
+typedef struct curveController{     // Struct for every curve separator
+  int velocity;                     // Speed for this curve
+  int breakerStrength;              // Brabking strength (reverse)
+  int timeBreaking;                 // time on reverse
 }  CurveController; 
 
+
+// Sets the number of curves i will not working 
 CurveController curves[40];
 
 
 
-
-//---------------------------------------------------------
-
-
-
-//------------------PID Control-------------------
+//---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
 float Kp = -0.1;
@@ -87,8 +110,6 @@ int forwardSpeed = 56;
 int maxSpeed = 100;
 int integralLimit = 200;
 int lSpeed, rSpeed;
-
-const bool LINE_BLACK = false;
 
 bool limiter = true;
 
@@ -108,7 +129,7 @@ int encoderRightPin2 = 32; //Encoder Output 'B' must connected with intreput pin
 
 volatile long encoderValue = 0; // Raw encoder value
 
-int markersDistance[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int markersDistance[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  //
 int markersSetupIndex = 0;
 int markersRacingIndex = 0;
 int breakingTime = 0;
