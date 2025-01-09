@@ -78,13 +78,13 @@ CurveController curves[40];
 //------------------PID Control-------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = -0.185;
+float Kp = -0.1;
 float Ki = 0.0001;
-float Kd = 0.125;
+float Kd = 0.7;
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
 int forwardSpeed = 56;
-int maxSpeed = 75;
+int maxSpeed = 100;
 int integralLimit = 200;
 int lSpeed, rSpeed;
 
@@ -287,7 +287,7 @@ void loop0(void * parameter) {
   //   enableCount = true;
   // }
 
-  //Serial.println(encoderValue);
+  Serial.println(encoderValue);
   vTaskDelay(10);
   
 //---------------------------------------------
