@@ -7,7 +7,7 @@
 ****************************************************************/
 // Atualização do dia 19 de dezembro de 2024. Código limpo, o turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
 #define DEBUG
-#define BT_NAME "N1"
+#define BT_NAME "Vin-A"
 // Names: Kriz | Vin-a
 
 
