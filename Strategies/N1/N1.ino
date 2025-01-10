@@ -10,9 +10,11 @@
 ****************************************************************/
 
 
-// Atualização do dia 9 de janeiro de 2025.  Código teve a estratégia de freiar ao ver o marcador lateral separado de outros códigos
-
-
+// Atualização do dia 10 de janeiro de 2025 por Ênio .  Código teve a estratégia de freiar ao ver o marcador lateral separado de outros códigos
+// Esse código ta uma bagunça gerenciada por Ênio
+//
+// Ele contém todos as estratégias feitas por mim, nele vou controlar quais estratégias estão sendo as mais rápidas
+// Este código é usado apenas para testes, não coloque ele no N1 sem saber oq está fazendo
 
 
 #include "Arduino.h"          // Library for the task manager
@@ -22,16 +24,17 @@
 
 
 
-// Dual core tasks 
+// ----------------------- Dual core tasks  ----------------------- 
 TaskHandle_t Task0;
 TaskHandle_t Task1;
 
 
-//----------------------- Bluetooth ---------------------
+//----------------------------- Bluetooth --------------------------
 // Defines Device's Bluetooth name
 #define DEBUG
 #define BT_NAME "I forgot to set a name"
 #ifdef DEBUG
+
 
 // Makes sure bluetooth is working
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -46,6 +49,7 @@ BluetoothSerial SerialBT;  // Bluetooth Serial instance
 //----------------------- Vespa ----------------------
 VespaMotors motor;  // Vespa Motor  Object
 QTRSensors qtr;     // QTR Sensor
+
 
 
 // Set button and led pins
@@ -93,8 +97,11 @@ typedef struct curveController{     // Struct for every curve separator
 }  CurveController; 
 
 
+
+
 // Sets the number of curves i will not working 
 CurveController curves[40];
+
 
 
 
@@ -104,6 +111,9 @@ float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 float Kp = -0.1;
 float Ki = 0.0001;
 float Kd = 0.7;
+
+
+
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
 int forwardSpeed = 56;
@@ -115,9 +125,13 @@ bool limiter = true;
 
 
 
+
+
+
+
 //------------------Encoder-------------------
 
-float distanceMotor;
+float distanceMotor;            //distance 
 float distance = 565;
 float distanceAverage;
 float multEncoder = 1;
@@ -131,31 +145,35 @@ int encoderRightPin2 = 32; //Encoder Output 'B' must connected with intreput pin
 
 volatile long encoderValue = 0; // Raw encoder value
 
+// Encoder marks to control a break or disaceleration at each point
 int markersDistance[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  //
-int markersSetupIndex = 0;
-int markersRacingIndex = 0;
-int breakingTime = 0;
-
-bool enableCount = true; 
+int markersSetupIndex = 0;      // Counter for setting up markersDistances in prefix menu
+int markersRacingIndex = 0;     // Counter for markersDistances when racing
+int breakingTime = 0;           // Used at breaker(), doing this so the program doesn't need to alloc every time the function is called
 
 
 
+//----------------------- Functions ----------------------- 
 
-
-
-int readSensors() {                             // Reads all 8 QTR Sensors
+int readSensors() {
   if (LINE_BLACK) {
-    return qtr.readLineBlack(sensorValues);     // Verifies if there is a end line after a set time
+    return qtr.readLineBlack(sensorValues);
   } else {
-    return qtr.readLineWhite(sensorValues);     
+    return qtr.readLineWhite(sensorValues);
   }
 }
 
 
 
+/**
+  Verifies if there is a end line after a set time
+
+  @return true if the end line was detected.
+*/
 
 
-bool markerChecker() {                                          
+// After (startMakerChecker) time, beggins to look after the right mark 
+bool markerChecker() {
   if (startMakerChecker < millis() - initialTime) {
     if (analogRead(PIN_MARKER_SENSOR) < 2000) {
       for (int i = 0; i < 10000; i++){ // se deseja aumentar um pouco o tempo da inércia do robô parar até ele de fato parar de andar abaixe o tamanho do loop.
@@ -167,10 +185,18 @@ bool markerChecker() {
   return false;
 }
 
+#ifdef DEBUG
+
+/**
+  Returns all stream of data sent over bluetooth until the
+  button is pressed.
+
+  @return String with the message sent by the bluetooth device
+*/
 
 
-
-String receiveBtMessage() {               // Returns the series od chars like a string
+// returns chars into string
+String receiveBtMessage() {
   String message;
   char incomingChar;
 
@@ -190,11 +216,11 @@ String receiveBtMessage() {               // Returns the series od chars like a 
   return message;
 }
 
-
-
+// Gets prefix 
 String getPrefix(String data) {
   return getElement(data, 0);
 }
+
 
 double getNumber(String data, int index) {
   return atof(getElement(data, index).c_str());
@@ -209,6 +235,7 @@ double getNumber(String data, int index) {
   @return String sub-string in the indicated position. If there is
   no value at this position, it returns empty string.
 */
+
 String getElement(String data, int index) {
   char separator = ' ';
   int found = 0;
@@ -230,11 +257,14 @@ String getElement(String data, int index) {
   return data.substring(startIndex, endIndex);
 }
 
+
 void updateEncoder(){
 
   encoderValue ++;
 
 }
+
+
 void breaker(int MillisOnReverse, int strength){
     breakingTime = millis();
     while ((millis() - breakingTime) < MillisOnReverse){
@@ -273,7 +303,9 @@ void printParameters() {
 void loop0(void * parameter) {
     for (;;) {
 
-  
+    // Left Sensor reader
+    // Don't make it a function, it will break the ESP
+    // Probally because it needs to read in memory everytime you call it
     if (analogRead(SENSOR_PIN) < 3000)
     {
       if (curveSensorWhite == false)
@@ -281,6 +313,8 @@ void loop0(void * parameter) {
         curveCount++;
         SerialBT.println(curveCount);
 
+
+        // The following code makes configurable the velocity after every curve marker
         //maxSpeed = curves[curveCount + 1].velocity;
         //breaker(curves[curveCount + 1].timeBreaking, curves[curveCount + 1].breakerStrength);
       }
@@ -291,25 +325,25 @@ void loop0(void * parameter) {
       curveSensorWhite = false;
     }
 
+    //------------------Encoder-------------------
 
-  // if (SerialBT.available()) {
-  //   SerialBT.println(distanceMotor);
-  //   SerialBT.read();
-  // }
-  // if (markersDistance[markersRacingIndex] < distanceMotor && markersDistance[markersRacingIndex] != 0){ // checa se 
-  //   SerialBT.print(markersDistance[markersRacingIndex]);
-  //   enableCount = false;
-  //   breaker(1000, 50);
-  //   markersRacingIndex++;
-  //   enableCount = true;
-  // }
+    if (SerialBT.available()) {
+      SerialBT.println(encoderValue);
+      SerialBT.read();
+    }
+    if (markersDistance[markersRacingIndex] < distanceMotor && markersDistance[markersRacingIndex] != 0){ // checa se 
+      SerialBT.print(markersDistance[markersRacingIndex]);
+      breaker(1000, 50);
+      markersRacingIndex++;
+    }
 
-  Serial.println(encoderValue);
-  vTaskDelay(10);
+    vTaskDelay(10);
   
 //---------------------------------------------
 }
 }
+
+
 void loop1(void * parameter) {
 	for (;;) {
 
@@ -335,24 +369,24 @@ void loop1(void * parameter) {
   lSpeed = maxSpeed + pid;
   rSpeed = maxSpeed - pid;
 
+  
   lSpeed = constrain(lSpeed, -maxSpeed, maxSpeed);
   rSpeed = constrain(rSpeed, -maxSpeed, maxSpeed);
 
 
 
-  if (markerChecker()) {  // Count the markers and stop the robot when reach a certain number
+  if (markerChecker()) {                        // Count the markers and stop the robot when reach a certain number
     motor.stop();
-#ifdef DEBUG
+  #ifdef DEBUG
     SerialBT.print(">> Timelapse: "); 
     SerialBT.print(millis() - initialTime);
     SerialBT.println(" seconds");
-#endif
+  #endif
     setup();
   } else if (error >= -marginError && error <= marginError) {  // If the error is within the MARGIN_ERROR, move on
     motor.turn(forwardSpeed, forwardSpeed);
   } else {  // If the error is outside the error range, continue doing PID
     motor.turn(lSpeed, rSpeed);
-//   }
     vTaskDelay(10);
     // Serial.println("CORE 1");
 	}
@@ -385,7 +419,7 @@ void setup()
 
 
   // Suspends both Tasks to start after the calibration state
-  vTaskSuspend(Task0);
+  vTaskSuspend(Task0); 
   vTaskSuspend(Task1);
 
 
@@ -489,9 +523,9 @@ void setup()
   digitalWrite(PIN_LED, HIGH);
   while (digitalRead(PIN_BUTTON) == HIGH) {  // Calibrates until the button is pressed
     qtr.calibrate();
-    //------------------Encoder-------------------
-    encoderValue = 0;
-    //-------------------------------------
+
+    encoderValue = 0;  // encoder goes to 0 after a run beggins
+
   }
   digitalWrite(PIN_LED, LOW);
 
@@ -521,6 +555,6 @@ void setup()
 
 void loop()
 {
-	delay(1);
+	
 }
 
