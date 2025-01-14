@@ -89,10 +89,11 @@ const bool LINE_BLACK = false;
 
 
 
-//-----------------------Curve Sensor----------------------
+//-----------------------Finish Marker Sensor----------------------
 #define SENSOR_PIN 36   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
 
 int finsishMarkerCount = 0;                 // Finish marker's counter
+int minimumFinishDistance = 5000;           // Distance to enable the rightsensor
 bool finishSensorWhite = false;              // if the sensor is above the marker
 
 
@@ -329,10 +330,10 @@ void loop0(void * parameter) {
     // Left Sensor reader
     // Don't make it a function, it will break the ESP32
     // Probally because it needs to read in memory everytime you call it
-    if (analogRead(SENSOR_PIN) < 3000)
+    if (analogRead(SENSOR_PIN) < 3000) 
     {
-      if (finishSensorWhite == false)
-      {
+      if (finishSensorWhite == false && (minimumFinishDistance > encoderValue || finsishMarkerCount < 1))   // only adds if the marker turns form black to white
+      {                                                                                                     // after the first one, only counts after the finsishMarkerCount mark
         finsishMarkerCount++;
         SerialBT.println(finsishMarkerCount);
       }
@@ -389,8 +390,8 @@ void loop1(void * parameter) {
 
 
 
-  if (markerChecker() && (finsishMarkerCount < 1) {                        // Count the markers and stop the robot when reach a certain number
-    motor.stop();
+  if (markerChecker() || (finsishMarkerCount < 1)) {                        // Count the markers and stop the robot when reach a certain number
+    motor.stop();                                                                                 // Or when finds 
   #ifdef DEBUG
     SerialBT.print(">> Timelapse: "); 
     SerialBT.print(millis() - initialTime);
