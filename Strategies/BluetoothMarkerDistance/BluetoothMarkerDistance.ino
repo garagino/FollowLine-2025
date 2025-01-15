@@ -403,7 +403,7 @@ void loop1(void * parameter) {
   } else {  // If the error is outside the error range, continue doing PID
     motor.turn(lSpeed, rSpeed);
     vTaskDelay(10);
-    // Serial.println("CORE 1");
+
 	}
 }
 }
