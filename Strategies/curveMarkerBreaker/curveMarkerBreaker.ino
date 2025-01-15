@@ -80,7 +80,7 @@ const bool LINE_BLACK = false;
 
 
 //-----------------------Curve Sensor----------------------
-#define SENSOR_PIN 36   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
+#define SENSOR_PIN 39   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
 
 int curveCount = 0;                 // Curve counter
 bool curveSensorWhite = false;      // if the sensor is above the marker
@@ -93,23 +93,29 @@ typedef struct curveController{     // Struct for every curve separator
 }  CurveController; 
 
 
-// Sets the number of curves
-CurveController curves[20] = {
-  {100, 40, 200},  {100, 40, 200}, {100, 40, 200}, {100, 40, 200},
-  {100, 40, 200}, {100, 40, 200}, {100, 40, 200}, {100, 40, 200},
-  {100, 40, 200}, {100, 40, 200}, {100, 40, 200}, {100, 40, 200},
-  {100, 40, 200}, {100, 40, 200}, {100, 40, 200}, {100, 40, 200},
-  {100, 40, 200}, {100, 40, 200}, {100, 40, 200}, {100, 40, 200}
+//Sets the number of curves
+CurveController curves[40] = {
+  {100, 100, 150}, {100, 100, 0}, {100, 100, 150}, {100, 100, 0},
+  {100, 100, 150}, {100, 100, 0}, {100, 100, 150}, {100, 100, 100},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0}
 };
+
 
 int breakingTime;
 
 //---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = -0.1;
+float Kp = -0.2;
 float Ki = 0.0001;
-float Kd = 0.7;
+float Kd = 0.05;
 
 
 
@@ -130,10 +136,7 @@ bool limiter = true;
 
 //------------------Encoder-------------------
 
-float distanceMotor;            //distance 
-float distance = 565;
-float distanceAverage;
-float multEncoder = 1;
+
 
 // Todas as portas da esp32 suportam interrupt, estou chutando que essas portas vão funcionar
 int encoderLeftPin1 = 25; //Encoder Output 'A' must connected with intreput pin of arduino.
@@ -295,23 +298,23 @@ void printParameters() {
 
 void loop1(void * parameter) {
     for (;;) {
-      Serial.println("oi");
       // Left Sensor reader
       // Don't make it a function, it will break the ESP
       // Probally because it needs to read in memory everytime you call it
       if (analogRead(SENSOR_PIN) < 3000)
       {
-        if (curveSensorWhite == false)
+        if (curveSensorWhite == false && marginError < 900 && marginError > -900)
         {
           curveCount++;
-          SerialBT.println(curveCount);
-
+          SerialBT.println(curveCount);   
           // The following code makes configurable the velocity after every curve marker
           maxSpeed = curves[curveCount].velocity;
-          breaker(curves[curveCount].timeBreaking, curves[curveCount].breakerStrength);
+          if (curves[curveCount].timeBreaking != 0){
+            breaker(curves[curveCount].timeBreaking, curves[curveCount].breakerStrength);
+
+          }
         }
         curveSensorWhite = true;
-
       }else
       {
         curveSensorWhite = false;
@@ -328,9 +331,7 @@ void loop1(void * parameter) {
 
 void loop0(void * parameter) {
 	for (;;) {
-
-  // Serial.print("Encoder  ");
-  // Serial.println(distanceMotor);
+  
 
 
   // readSensors() returns the line position between 0 and MAX_POSITION.
@@ -354,7 +355,6 @@ void loop0(void * parameter) {
   
   lSpeed = constrain(lSpeed, -maxSpeed, maxSpeed);
   rSpeed = constrain(rSpeed, -maxSpeed, maxSpeed);
-
 
 
   if (markerChecker()) {                        // Count the markers and stop the robot when reach a certain number
@@ -524,6 +524,6 @@ void setup()
 
 void loop()
 {
-	
+	delay(10);
 }
 
