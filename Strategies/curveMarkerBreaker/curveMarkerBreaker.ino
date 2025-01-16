@@ -268,6 +268,15 @@ void breaker(int MillisOnReverse, int strength){
     }
 }
 
+bool isCrossroad() {
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    if (sensorValues[i] < 400) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void printParameters() {
   SerialBT.println("Configured parameters:");
   SerialBT.print(">> P: ");
@@ -297,43 +306,30 @@ void printParameters() {
 
 
 void loop1(void * parameter) {
-    for (;;) {
-      // Left Sensor reader
-      // Don't make it a function, it will break the ESP
-      // Probally because it needs to read in memory everytime you call it
-      if (analogRead(SENSOR_PIN) < 3000)
-      {
-        if (curveSensorWhite == false && marginError < 900 && marginError > -900)
-        {
-          curveCount++;
-          SerialBT.println(curveCount);   
-          // The following code makes configurable the velocity after every curve marker
-          maxSpeed = curves[curveCount].velocity;
-          if (curves[curveCount].timeBreaking != 0){
+  for (;;) {
+    // Left Sensor reader
+    // Don't make it a function, it will break the ESP
+    // Probally because it needs to read in memory everytime you call it
+    if (analogRead(SENSOR_PIN) < 3000 && !isCrossroad()) {
+      if (curveSensorWhite == false && marginError < 900 && marginError > -900) {
+        curveCount++;   
+        maxSpeed = curves[curveCount].velocity;
+        if (curves[curveCount].timeBreaking != 0) {
             breaker(curves[curveCount].timeBreaking, curves[curveCount].breakerStrength);
-
-          }
         }
-        curveSensorWhite = true;
-      }else
-      {
-        curveSensorWhite = false;
+        SerialBT.println(curveCount);
       }
-
-
-
+    curveSensorWhite = true;
+    } else {
+      curveSensorWhite = false;
+    }
     vTaskDelay(10);
-  
-//---------------------------------------------
   } 
 }
-
 
 void loop0(void * parameter) {
 	for (;;) {
   
-
-
   // readSensors() returns the line position between 0 and MAX_POSITION.
   // error is a re-map from -1000 to 1000 range.
   error = map(readSensors(), 0, MAX_POSITION, -1000, 1000);
@@ -526,4 +522,3 @@ void loop()
 {
 	delay(10);
 }
-
