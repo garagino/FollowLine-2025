@@ -10,17 +10,7 @@
 ****************************************************************/
 
 
-/*
-* Atualização do dia 13 de janeiro de 2025 por Ênio.  Código teve a estratégia de freiar a cada distancia percorrida
-* 
-* Funciona a partir do array curvesDistance[];
-* Nele, colocamos aonde o robô deve freiar
-*  
-* Para isso, foi feito uma funcao durante o loop que retorna a posicao do robô ao mandar uma mensagem vazia via bluetooth
-*
-* A parada final é baseada no sensor Lateral da Direita foi adicionado um parador se checar mais de duas markers
-*/
-
+// Atualização do dia 10 de janeiro de 2025 por Ênio .  Código teve a estratégia de freiar ao ver o marcador lateral separado de outros códigos
 
 
 #include "Arduino.h"          // Library for the task manager
@@ -89,20 +79,43 @@ const bool LINE_BLACK = false;
 
 
 
-//-----------------------Finish Marker Sensor----------------------
-#define SENSOR_PIN 36   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
+//-----------------------Curve Sensor----------------------
+#define SENSOR_PIN 39   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
 
-int finsishMarkerCount = 0;                 // Finish marker's counter
-int minimumFinishDistance = 5000;           // Distance to enable the rightsensor
-bool finishSensorWhite = false;              // if the sensor is above the marker
+int curveCount = 0;                 // Curve counter
+bool curveSensorWhite = false;      // if the sensor is above the marker
 
+
+typedef struct curveController{     // Struct for every curve separator
+  int velocity;                     // Speed for this curve
+  int breakerStrength;              // Brabking strength (reverse)
+  int timeBreaking;                 // time on reverse
+}  CurveController; 
+
+
+//Sets the number of curves
+CurveController curves[40] = {
+  {100, 100, 150}, {100, 100, 0}, {100, 100, 150}, {100, 100, 0},
+  {100, 100, 150}, {100, 100, 0}, {100, 100, 150}, {100, 100, 100},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0},
+  {100, 100, 0}, {100, 100, 0}, {100, 100, 0}, {100, 100, 0}
+};
+
+
+int breakingTime;
 
 //---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = -0.1;
+float Kp = -0.2;
 float Ki = 0.0001;
-float Kd = 0.7;
+float Kd = 0.05;
 
 
 
@@ -122,57 +135,17 @@ bool limiter = true;
 
 
 //------------------Encoder-------------------
-volatile long encoderValue = 0; // Raw encoder value
-bool countEnabled = true;
 
 
 
+// Todas as portas da esp32 suportam interrupt, estou chutando que essas portas vão funcionar
 int encoderLeftPin1 = 25; //Encoder Output 'A' must connected with intreput pin of arduino.
 int encoderLeftPin2 = 26; //Encoder Output 'B' must connected with intreput pin of arduino.
 
 int encoderRightPin1 = 33; //Encoder Output 'A' must connected with intreput pin of arduino.
 int encoderRightPin2 = 32; //Encoder Output 'B' must connected with intreput pin of arduino.
 
-
-
-
-
-typedef struct {     // Struct for every curve separator
-  int velocity;                     // Speed for this curve
-  int breakerStrength;              // Brabking strength (reverse)
-  int timeBreaking;                 // time on reverse
-  int distanceToBreak;              // Distancia determinada para freias
-}  CurveController; 
-
-
-// Encoder marks to control a break or disaceleration at each point
-CurveController curvesDistance[20] = {
-  {50, 40, 100, 400.0},  {100, 40, 200, 800.0}, {50, 40, 300, 1600.0}, {100, 40, 400, 3200.0},
-  {50, 40, 500, 6400.0}, {100, 40, 600, 12800.0}, {50, 40, 700, 25600.0}, {100, 40, 800, 51200.0},
-  {50, 40, 900, 102400.0}, {100, 40, 1000, 204800.0}, {50, 40, 1100, 409600.0}, {100, 40, 1200, 819200.0},
-  {50, 40, 1300, 1638400.0}, {100, 40, 1400, 3276800.0}, {50, 40, 1500, 6553600.0}, {100, 40, 1600, 13107200.0},
-  {50, 40, 1700, 26214400.0}, {100, 40, 1800, 52428800.0}, {50, 40, 1900, 104857600.0}, {100, 40, 2000, 209715200.0}
-};
-
-
-/*
-CurveController curvesDistance[20] = {                                                      // For testing, will not work with distances set to 0
-  {50, 40, 100, 0.0},  {100, 40, 200, 0.0}, {50, 40, 300, 0.0}, {100, 40, 400, 0.0},
-  {50, 40, 500, 0.0}, {100, 40, 600, 0.0}, {50, 40, 700, 0.0}, {100, 40, 800, 0.0},
-  {50, 40, 900, 0.0}, {100, 40, 1000, 0.0}, {50, 40, 1100, 0.0}, {100, 40, 1200, 0.0},
-  {50, 40, 1300, 0.0}, {100, 40, 1400, 0.0}, {50, 40, 1500, 0.0}, {100, 40, 1600, 0.0},
-  {50, 40, 1700, 0.0}, {100, 40, 1800, 0.0}, {50, 40, 1900, 0.0}, {100, 40, 2000, 0.0}
-};
-*/ 
-
-
-
-int curvesSetupIndex = 0;                                             // Counter for setting up curvesDistances in prefix menu
-int curvesRacingIndex = 0;                                            // Counter for curvesDistances when racing
-int breakingTime = 0;                                                  // Used at breaker(), doing this so the program doesn't need to alloc every time the function is called
-
-
-
+volatile long encoderValue = 0; // Raw encoder value
 
 
 
@@ -282,9 +255,9 @@ String getElement(String data, int index) {
 
 
 void updateEncoder(){
-  if (countEnabled){
-    encoderValue ++;
-  }
+
+  encoderValue ++;
+
 }
 
 
@@ -293,6 +266,15 @@ void breaker(int MillisOnReverse, int strength){
     while ((millis() - breakingTime) < MillisOnReverse){
       motor.backward(strength);
     }
+}
+
+bool isCrossroad() {
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    if (sensorValues[i] < 400) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void printParameters() {
@@ -323,49 +305,31 @@ void printParameters() {
 #endif
 
 
-void loop0(void * parameter) {
-    for (;;) {
-    Serial.println(encoderValue);
-    //------------------Finish Sensor-------------------
+void loop1(void * parameter) {
+  for (;;) {
     // Left Sensor reader
-    // Don't make it a function, it will break the ESP32
+    // Don't make it a function, it will break the ESP
     // Probally because it needs to read in memory everytime you call it
-    if (analogRead(SENSOR_PIN) < 3000) 
-    {
-      if (finishSensorWhite == false && (minimumFinishDistance > encoderValue || finsishMarkerCount < 1))   // only adds if the marker turns form black to white
-      {                                                                                                     // after the first one, only counts after the finsishMarkerCount mark
-        finsishMarkerCount++;
-        SerialBT.println(finsishMarkerCount);
+    if (analogRead(SENSOR_PIN) < 3000 && !isCrossroad()) {
+      if (curveSensorWhite == false && marginError < 900 && marginError > -900) {
+        curveCount++;   
+        maxSpeed = curves[curveCount].velocity;
+        if (curves[curveCount].timeBreaking != 0) {
+            breaker(curves[curveCount].timeBreaking, curves[curveCount].breakerStrength);
+        }
+        SerialBT.println(curveCount);
       }
-      finishSensorWhite = true;
-    }else{
-      finishSensorWhite = false;
+    curveSensorWhite = true;
+    } else {
+      curveSensorWhite = false;
     }
-
-    //------------------Encoder-------------------
-
-    if (SerialBT.available()) {
-      SerialBT.println(encoderValue);
-      SerialBT.read();
-    }
-    if (curvesDistance[curvesRacingIndex].distanceToBreak < encoderValue && curvesDistance[curvesRacingIndex].distanceToBreak != 0){ 
-      SerialBT.print(curvesDistance[curvesRacingIndex].distanceToBreak);
-      countEnabled = false;
-      breaker(curvesDistance[curvesRacingIndex].timeBreaking, curvesDistance[curvesRacingIndex].breakerStrength);
-      countEnabled = true;
-      curvesRacingIndex++;
-
-    }
-
     vTaskDelay(10);
-    
-  }
+  } 
 }
 
-
-void loop1(void * parameter) {
+void loop0(void * parameter) {
 	for (;;) {
-
+  
   // readSensors() returns the line position between 0 and MAX_POSITION.
   // error is a re-map from -1000 to 1000 range.
   error = map(readSensors(), 0, MAX_POSITION, -1000, 1000);
@@ -389,9 +353,8 @@ void loop1(void * parameter) {
   rSpeed = constrain(rSpeed, -maxSpeed, maxSpeed);
 
 
-
-  if (markerChecker() || (finsishMarkerCount < 1)) {                        // Count the markers and stop the robot when reach a certain number
-    motor.stop();                                                                                 // Or when finds 
+  if (markerChecker()) {                        // Count the markers and stop the robot when reach a certain number
+    motor.stop();
   #ifdef DEBUG
     SerialBT.print(">> Timelapse: "); 
     SerialBT.print(millis() - initialTime);
@@ -403,7 +366,7 @@ void loop1(void * parameter) {
   } else {  // If the error is outside the error range, continue doing PID
     motor.turn(lSpeed, rSpeed);
     vTaskDelay(10);
-
+    // Serial.println("CORE 1");
 	}
 }
 }
@@ -438,7 +401,7 @@ void setup()
   vTaskSuspend(Task1);
 
 
-
+  
 
   qtr.setTypeRC();  // For QTR-8RC      Sensor pins:
   qtr.setSensorPins((const uint8_t[]){ 21, 19, 5, 16, 22, 23, 18, 17 }, SENSOR_COUNT);
@@ -491,9 +454,6 @@ void setup()
       Kd = getNumber(btMessage, 3);
     } else if (prefix == "spe") {
       maxSpeed = getNumber(btMessage, 1);
-    } else if (prefix == "mrk"){
-        curvesDistance[curvesSetupIndex].distanceToBreak = getNumber(btMessage, 1);
-        curvesSetupIndex++;
     }else if (prefix == "for") {
       forwardSpeed = getNumber(btMessage, 1);
     } else if (prefix == "tim") {
@@ -528,7 +488,9 @@ void setup()
   digitalWrite(PIN_LED, HIGH);
   while (digitalRead(PIN_BUTTON) == HIGH) {  // Calibrates until the button is pressed
     qtr.calibrate();
+
     encoderValue = 0;  // encoder goes to 0 after a run beggins
+
   }
   digitalWrite(PIN_LED, LOW);
 
@@ -558,6 +520,5 @@ void setup()
 
 void loop()
 {
-	delay(1);
+	delay(10);
 }
-
