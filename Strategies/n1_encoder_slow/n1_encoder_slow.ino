@@ -80,9 +80,9 @@ bool curveSensorWhite = false;      // if the sensor is above the marker
 //---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = 0.8;
+float Kp = 0.472;
 float Ki = 0.0001;
-float Kd = 2;
+float Kd = 2.1;
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
 int forwardSpeed = 100;
@@ -241,7 +241,7 @@ void printParameters() {
 #endif
 
 void loop0(void * parameter) {
-    int mediaEncoder ;
+    int mediaEncoder;
     for (;;) {   
       mediaEncoder = (encoderValueLeft + encoderValueRight)/2;  
       if (SerialBT.available()) {
@@ -253,23 +253,23 @@ void loop0(void * parameter) {
       // e a maior velocidade em regime de PID (maxSpeed)
       // diminuimos a velocidade do robo em pontos específicos da pista
       // apos testes vamos implementar os valores em um vetor 
-      if ((mediaEncoder > 1500) && (mediaEncoder < 2000) ){  
+      if ((mediaEncoder > 5000) && (mediaEncoder < 10000) ){  
         maxSpeed = 50;  
         forwardSpeed = 50;
       }else{
-        if ((mediaEncoder > 2000) && (mediaEncoder < 7000) ){  
+        if ((mediaEncoder >= 10000) && (mediaEncoder < 15000) ){  
             maxSpeed = 100;
             forwardSpeed = 100;
         }else{
-            if ((mediaEncoder > 7000) && (mediaEncoder < 8000) ){   
+            if ((mediaEncoder >= 15000) && (mediaEncoder < 20000) ){   
                 maxSpeed = 50;
                 forwardSpeed = 50;
             }else{
-                if ((mediaEncoder > 8000)){   
+                if ((mediaEncoder >= 20000) && (mediaEncoder < 25000) ){   
                     maxSpeed = 100;
                     forwardSpeed = 100;
                 }else{
-                    if ((mediaEncoder > 15000)){   
+                    if ((mediaEncoder >= 25000)){   
                         endTrack = true;
                     }
                 }
@@ -327,7 +327,6 @@ void loop1(void * parameter) {
 void setup()
 {
   // noInterrupts();                                 // stop interrupts from accurring
-
 	Serial.begin(115200);
 	Serial.println("Setup started.");
 
