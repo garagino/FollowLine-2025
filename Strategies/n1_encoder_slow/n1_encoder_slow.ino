@@ -303,16 +303,16 @@ void loop1(void * parameter) {
         lSpeed = constrain(lSpeed, -maxSpeed, maxSpeed);
         rSpeed = constrain(rSpeed, -maxSpeed, maxSpeed);
 #ifdef DEBUG
-        SerialBT.print(">> Timelapse: "); 
-        SerialBT.print(millis() - initialTime);
-        SerialBT.println(" seconds");
+        //SerialBT.print(">> Timelapse: "); 
+        //SerialBT.print(millis() - initialTime);
+        //SerialBT.println(" seconds");
 #endif
         if (endTrack){
             for (int i = 0; i < 10000; i++){ // se deseja aumentar um pouco o tempo da inércia do robô parar até ele de fato parar de andar abaixe o tamanho do loop.
                 motor.turn(-50, -50);
             }
             motor.stop();
-            setup();
+            ESP.restart(); 
         }else{    
             if (error >= -marginError && error <= marginError) {  // If the error is within the MARGIN_ERROR, move on
                 motor.turn(forwardSpeed, forwardSpeed);
