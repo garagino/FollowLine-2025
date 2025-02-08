@@ -253,31 +253,58 @@ void loop0(void * parameter) {
       // e a maior velocidade em regime de PID (maxSpeed)
       // diminuimos a velocidade do robo em pontos específicos da pista
       // apos testes vamos implementar os valores em um vetor 
-      if ((mediaEncoder > 5000) && (mediaEncoder < 10000) ){  
-        maxSpeed = 50;  
-        forwardSpeed = 50;
-      }else{
-        if ((mediaEncoder >= 10000) && (mediaEncoder < 15000) ){  
-            maxSpeed = 100;
-            forwardSpeed = 100;
-        }else{
-            if ((mediaEncoder >= 15000) && (mediaEncoder < 20000) ){   
-                maxSpeed = 50;
-                forwardSpeed = 50;
-            }else{
-                if ((mediaEncoder >= 20000) && (mediaEncoder < 25000) ){   
-                    maxSpeed = 100;
-                    forwardSpeed = 100;
-                }else{
-                    if ((mediaEncoder >= 25000)){   
-                        endTrack = true;
-                    }
-                }
-            } 
-        }   
-      }                                                                                                  // Or when finds 
-      vTaskDelay(10);
-  }
+      
+      // if(mediaEncoder % 100 == 0 && mediaEncoder != 0){
+      //   SerialBT.println(mediaEncoder);
+      // }
+      
+      if ((mediaEncoder > 1000) && (mediaEncoder <= 3000)){  
+        maxSpeed = 100;  
+        forwardSpeed = 84;
+        // if (mediaEncoder == 1001){
+        //   SerialBT.println(">>>>>>>> 1k ");
+        //   SerialBT.print(">> maxSpeed: ");
+        //   SerialBT.println(maxSpeed);
+        //   SerialBT.print(">> forwardSpeed: ");
+        //   SerialBT.println(forwardSpeed);
+        // }
+      }else if ((mediaEncoder > 3000) && (mediaEncoder <= 5000)) {        
+        maxSpeed = 100;
+        forwardSpeed = 100;
+        // if (mediaEncoder == 3001){
+        //   SerialBT.println(">>>>>>>> 3k ");
+        //   SerialBT.print(">> maxSpeed: ");
+        //   SerialBT.println(maxSpeed);
+        //   SerialBT.print(">> forwardSpeed: ");
+        //   SerialBT.println(forwardSpeed);
+        // }
+      }else if ((mediaEncoder > 5000) && (mediaEncoder <= 7000)){       
+        maxSpeed = 100;
+        forwardSpeed = 84;
+        // if (mediaEncoder == 5001){
+        //   SerialBT.println(">>>>>>>> 5k ");
+        //   SerialBT.print(">> maxSpeed: ");
+        //   SerialBT.println(maxSpeed);
+        //   SerialBT.print(">> forwardSpeed: ");
+        //   SerialBT.println(forwardSpeed);
+        // }
+      }else if ((mediaEncoder > 7000) && (mediaEncoder <= 9000)){
+        maxSpeed = 100;
+        forwardSpeed = 100;
+        // if (mediaEncoder == 7001){
+        //   SerialBT.println(">>>>>>>> 7k ");
+        //   SerialBT.print(">> maxSpeed: ");
+        //   SerialBT.println(maxSpeed);
+        //   SerialBT.print(">> forwardSpeed: ");
+        //   SerialBT.println(forwardSpeed);
+        // }
+      }else if (mediaEncoder > 9000){
+        // SerialBT.print(">> end?: ");
+        // SerialBT.println(mediaEncoder);
+        endTrack = true;
+      }   
+    }                                                                                                  // Or when finds 
+  vTaskDelay(10);
 }
 
 void loop1(void * parameter) {
