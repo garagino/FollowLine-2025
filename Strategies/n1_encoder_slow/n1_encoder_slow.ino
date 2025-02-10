@@ -85,7 +85,7 @@ float Ki = 0.0001;
 float Kd = 2.1;
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
-int forwardSpeed = 100;
+int forwardSpeed = 84;
 int maxSpeed = 100;
 int integralLimit = 200;
 int lSpeed, rSpeed;
@@ -258,49 +258,79 @@ void loop0(void * parameter) {
       //   SerialBT.println(mediaEncoder);
       // }
       
-      if ((mediaEncoder > 1000) && (mediaEncoder <= 3000)){  
+      if ((mediaEncoder > 0) && (mediaEncoder <= 1700)){  
         maxSpeed = 100;  
-        forwardSpeed = 84;
-        // if (mediaEncoder == 1001){
-        //   SerialBT.println(">>>>>>>> 1k ");
-        //   SerialBT.print(">> maxSpeed: ");
-        //   SerialBT.println(maxSpeed);
-        //   SerialBT.print(">> forwardSpeed: ");
-        //   SerialBT.println(forwardSpeed);
-        // }
-      }else if ((mediaEncoder > 3000) && (mediaEncoder <= 5000)) {        
+        forwardSpeed = 76;
+        if (mediaEncoder == 1699){
+          SerialBT.println(">>>>>>>> 0 - 17 k ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 1700) && (mediaEncoder <= 2700)) {        
         maxSpeed = 100;
         forwardSpeed = 100;
-        // if (mediaEncoder == 3001){
-        //   SerialBT.println(">>>>>>>> 3k ");
-        //   SerialBT.print(">> maxSpeed: ");
-        //   SerialBT.println(maxSpeed);
-        //   SerialBT.print(">> forwardSpeed: ");
-        //   SerialBT.println(forwardSpeed);
-        // }
-      }else if ((mediaEncoder > 5000) && (mediaEncoder <= 7000)){       
+        if (mediaEncoder == 1701){
+          SerialBT.println(">>>>>>>> 17 - 27 k ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 2700) && (mediaEncoder <= 3000)){       
         maxSpeed = 100;
-        forwardSpeed = 84;
-        // if (mediaEncoder == 5001){
-        //   SerialBT.println(">>>>>>>> 5k ");
-        //   SerialBT.print(">> maxSpeed: ");
-        //   SerialBT.println(maxSpeed);
-        //   SerialBT.print(">> forwardSpeed: ");
-        //   SerialBT.println(forwardSpeed);
-        // }
-      }else if ((mediaEncoder > 7000) && (mediaEncoder <= 9000)){
+        forwardSpeed = 80;
+        if (mediaEncoder == 2701){
+          SerialBT.println(">>>>>>>> 27 - 30 k ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 3000) && (mediaEncoder <= 4000)){
         maxSpeed = 100;
         forwardSpeed = 100;
-        // if (mediaEncoder == 7001){
-        //   SerialBT.println(">>>>>>>> 7k ");
-        //   SerialBT.print(">> maxSpeed: ");
-        //   SerialBT.println(maxSpeed);
-        //   SerialBT.print(">> forwardSpeed: ");
-        //   SerialBT.println(forwardSpeed);
-        // }
-      }else if (mediaEncoder > 9000){
-        // SerialBT.print(">> end?: ");
-        // SerialBT.println(mediaEncoder);
+        if (mediaEncoder == 3001){
+          SerialBT.println(">>>>>>>>30 - 40 ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 4000) && (mediaEncoder <= 4500)){
+        maxSpeed = 100;
+        forwardSpeed = 84;
+        if (mediaEncoder == 4001){
+          SerialBT.println(">>>>>>>>40 - 45 ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 4500) && (mediaEncoder <= 7000)){
+        maxSpeed = 100;
+        forwardSpeed = 84;
+        if (mediaEncoder == 4501){
+          SerialBT.println(">>>>>>>>45 - 70 ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if ((mediaEncoder > 7000) && (mediaEncoder <= 8900)){
+        maxSpeed = 100;
+        forwardSpeed = 80;
+        if (mediaEncoder == 7001){
+          SerialBT.println(">>>>>>>>70 - 89 ");
+          SerialBT.print(">> maxSpeed: ");
+          SerialBT.println(maxSpeed);
+          SerialBT.print(">> forwardSpeed: ");
+          SerialBT.println(forwardSpeed);
+        }
+      }else if (mediaEncoder > 8900){
+        SerialBT.print(">> end?: ");
+        SerialBT.println(mediaEncoder);
         endTrack = true;
       }   
     }                                                                                                  // Or when finds 
