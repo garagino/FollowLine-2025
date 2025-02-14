@@ -85,7 +85,7 @@ float Ki = 0.0001;
 float Kd = 2.1;
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
-int forwardSpeed = 84;
+int forwardSpeed = 100;
 int maxSpeed = 100;
 int integralLimit = 200;
 int lSpeed, rSpeed;
@@ -258,77 +258,31 @@ void loop0(void * parameter) {
       //   SerialBT.println(mediaEncoder);
       // }
       
-      if ((mediaEncoder > 0) && (mediaEncoder <= 1700)){  
-        maxSpeed = 100;  
-        forwardSpeed = 76;
-        if (mediaEncoder == 1699){
-          SerialBT.println(">>>>>>>> 0 - 17 k ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 1700) && (mediaEncoder <= 2700)) {        
+      if ((mediaEncoder > 0) && (mediaEncoder <= 2200)){  
         maxSpeed = 100;
         forwardSpeed = 100;
-        if (mediaEncoder == 1701){
-          SerialBT.println(">>>>>>>> 17 - 27 k ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 2700) && (mediaEncoder <= 3000)){       
+        // trecho 0 - start -> p1
+      }else if ((mediaEncoder > 2200) && (mediaEncoder <= 3300)) {        
         maxSpeed = 100;
-        forwardSpeed = 80;
-        if (mediaEncoder == 2701){
-          SerialBT.println(">>>>>>>> 27 - 30 k ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 3000) && (mediaEncoder <= 4000)){
+        forwardSpeed = 84;
+        // trecho 1 - p1 -> p2
+      }else if ((mediaEncoder > 3300) && (mediaEncoder <= 8900)){       
         maxSpeed = 100;
         forwardSpeed = 100;
-        if (mediaEncoder == 3001){
-          SerialBT.println(">>>>>>>>30 - 40 ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 4000) && (mediaEncoder <= 4500)){
+        // trecho 2 - p2 -> p3
+      }else if ((mediaEncoder > 8900) && (mediaEncoder <= 15000)){
+        maxSpeed = 100;
+        forwardSpeed = 90;
+        // trecho 3 - p3 -> p4
+      }else if ((mediaEncoder > 15000) && (mediaEncoder <= 18500)){
         maxSpeed = 100;
         forwardSpeed = 84;
-        if (mediaEncoder == 4001){
-          SerialBT.println(">>>>>>>>40 - 45 ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 4500) && (mediaEncoder <= 7000)){
+        // trecho 4 - p4 -> p5
+      }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22200)){
         maxSpeed = 100;
-        forwardSpeed = 84;
-        if (mediaEncoder == 4501){
-          SerialBT.println(">>>>>>>>45 - 70 ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if ((mediaEncoder > 7000) && (mediaEncoder <= 8900)){
-        maxSpeed = 100;
-        forwardSpeed = 80;
-        if (mediaEncoder == 7001){
-          SerialBT.println(">>>>>>>>70 - 89 ");
-          SerialBT.print(">> maxSpeed: ");
-          SerialBT.println(maxSpeed);
-          SerialBT.print(">> forwardSpeed: ");
-          SerialBT.println(forwardSpeed);
-        }
-      }else if (mediaEncoder > 8900){
+        forwardSpeed = 100;
+        // trecho 5 p5 -> end
+      }else if (mediaEncoder > 22200){
         SerialBT.print(">> end?: ");
         SerialBT.println(mediaEncoder);
         endTrack = true;
@@ -336,6 +290,8 @@ void loop0(void * parameter) {
     }                                                                                                  // Or when finds 
   vTaskDelay(10);
 }
+
+// IronCUP - ~31s
 
 void loop1(void * parameter) {
 	for (;;) {
