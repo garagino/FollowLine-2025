@@ -244,10 +244,10 @@ void loop0(void * parameter) {
     int mediaEncoder;
     for (;;) {   
       mediaEncoder = (encoderValueLeft + encoderValueRight)/2;  
-      if (SerialBT.available()) {
-        SerialBT.println (mediaEncoder);
-        SerialBT.read();
-      }
+      // if (SerialBT.available()) {
+      //   SerialBT.println (mediaEncoder);
+      //   SerialBT.read();
+      // }
       // implemaentacao temporaria usando hardcode, definimos os valores 
       // dos pontos e definimos a velocidade maxima em erro menor que a margem (forwardSpeed) 
       // e a maior velocidade em regime de PID (maxSpeed)
@@ -260,23 +260,23 @@ void loop0(void * parameter) {
       
       if ((mediaEncoder > 0) && (mediaEncoder <= 2200)){  
         maxSpeed = 100;
-        forwardSpeed = 100;
+        forwardSpeed = 99;
         // trecho 0 - start -> p1
       }else if ((mediaEncoder > 2200) && (mediaEncoder <= 3300)) {        
         maxSpeed = 100;
-        forwardSpeed = 90;
+        forwardSpeed = 99;
         // trecho 1 - p1 -> p2
       }else if ((mediaEncoder > 3300) && (mediaEncoder <= 8900)){       
         maxSpeed = 100;
-        forwardSpeed = 100;
+        forwardSpeed = 99;
         // trecho 2 - p2 -> p3
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 1700)){
         maxSpeed = 100;
-        forwardSpeed = 90;
+        forwardSpeed = 99;
         // trecho 3 - p3 -> p4
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 15000)){
         maxSpeed = 100;
-        forwardSpeed = 90;
+        forwardSpeed = 99;
         // trecho 3 - p3 -> p4
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 17000)){
         maxSpeed = 100;
@@ -284,7 +284,7 @@ void loop0(void * parameter) {
         // trecho 3 - p3 -> p4
       }else if ((mediaEncoder > 17000) && (mediaEncoder <= 18500)){
         maxSpeed = 100;
-        forwardSpeed = 95;
+        forwardSpeed = 99;
         // trecho 4 - p4 -> p5
       }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22200)){
         maxSpeed = 100;
