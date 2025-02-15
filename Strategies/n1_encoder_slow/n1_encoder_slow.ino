@@ -264,19 +264,27 @@ void loop0(void * parameter) {
         // trecho 0 - start -> p1
       }else if ((mediaEncoder > 2200) && (mediaEncoder <= 3300)) {        
         maxSpeed = 100;
-        forwardSpeed = 84;
+        forwardSpeed = 90;
         // trecho 1 - p1 -> p2
       }else if ((mediaEncoder > 3300) && (mediaEncoder <= 8900)){       
         maxSpeed = 100;
         forwardSpeed = 100;
         // trecho 2 - p2 -> p3
+      }else if ((mediaEncoder > 8900) && (mediaEncoder <= 1700)){
+        maxSpeed = 100;
+        forwardSpeed = 90;
+        // trecho 3 - p3 -> p4
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 15000)){
         maxSpeed = 100;
         forwardSpeed = 90;
         // trecho 3 - p3 -> p4
-      }else if ((mediaEncoder > 15000) && (mediaEncoder <= 18500)){
+      }else if ((mediaEncoder > 8900) && (mediaEncoder <= 17000)){
         maxSpeed = 100;
-        forwardSpeed = 84;
+        forwardSpeed = 80;
+        // trecho 3 - p3 -> p4
+      }else if ((mediaEncoder > 17000) && (mediaEncoder <= 18500)){
+        maxSpeed = 100;
+        forwardSpeed = 95;
         // trecho 4 - p4 -> p5
       }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22200)){
         maxSpeed = 100;
