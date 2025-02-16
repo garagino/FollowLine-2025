@@ -80,13 +80,13 @@ bool curveSensorWhite = false;      // if the sensor is above the marker
 //---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = 0.412;
+float Kp = 0.35;
 float Ki = 0.0001;
-float Kd = 2.1;
+float Kd = 0.5;
 
 // O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
-int forwardSpeed = 100;
 int maxSpeed = 100;
+int forwardSpeed = 80;
 int integralLimit = 200;
 int lSpeed, rSpeed;
 
@@ -262,39 +262,39 @@ void loop0(void * parameter) {
       
       if ((mediaEncoder > 0) && (mediaEncoder <= 2200)){  
         maxSpeed = 100;
-        forwardSpeed = 85;
+        forwardSpeed = 72;
         // trecho 0 | start -> p1 | AZUL
-      }else if ((mediaEncoder > 2200) && (mediaEncoder <= 2600)) {        
+      }else if ((mediaEncoder > 2200) && (mediaEncoder <= 2400)) {        
         maxSpeed = 100;
-        forwardSpeed = 95;
+        forwardSpeed = 72;
         // trecho 1 |  p1 -> p2 | VERMELHO
-      }else if ((mediaEncoder > 2600) && (mediaEncoder <= 3300)) {        
+      }else if ((mediaEncoder > 2400) && (mediaEncoder <= 3350)) {        
         maxSpeed = 100;
-        forwardSpeed = 70;
+        forwardSpeed = 45;
         // trecho 2 | p1 -> p2 | CIANO
-      }else if ((mediaEncoder > 3300) && (mediaEncoder <= 8900)){       
+      }else if ((mediaEncoder > 3350) && (mediaEncoder <= 8900)){       
         maxSpeed = 100;
-        forwardSpeed = 90;
+        forwardSpeed = 80;
         // trecho 3 | p2 -> p3 | ROSA
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 15000)){
         maxSpeed = 100;
-        forwardSpeed = 90;
+        forwardSpeed = 75;
         // trecho 4 | p3 -> p4 | VERDE
-      }else if ((mediaEncoder > 15000) && (mediaEncoder <= 16000)){
+      }else if ((mediaEncoder > 15000) && (mediaEncoder <= 16200)){
         maxSpeed = 100;
-        forwardSpeed = 95;
+        forwardSpeed = 80;
         // trecho 5 | p4 -> p5 | BRANCO
-      }else if ((mediaEncoder > 16000) && (mediaEncoder <= 17000)){
+      }else if ((mediaEncoder > 16200) && (mediaEncoder <= 17000)){
         maxSpeed = 100;
-        forwardSpeed = 70;
+        forwardSpeed = 45;
         // trecho 6 | p4 -> p5 | AMARELO
       }else if ((mediaEncoder > 17000) && (mediaEncoder <= 18500)){
         maxSpeed = 100;
-        forwardSpeed = 95; 
+        forwardSpeed = 85; 
         // trecho 7 | p4 -> p5 | VERMELHO 2
       }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22050)){
         maxSpeed = 100;
-        forwardSpeed = 95;
+        forwardSpeed = 85;
         // trecho 8 | p5 -> end | LARANJA
       }else if (mediaEncoder > stoppingPoint){
         SerialBT.print(">> end?: ");
@@ -302,7 +302,7 @@ void loop0(void * parameter) {
         endTrack = true;
       }   
     }
-                                                                                         // Or when finds 
+    // Or when finds 
   vTaskDelay(10);
 }
 
