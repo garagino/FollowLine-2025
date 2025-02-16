@@ -80,7 +80,7 @@ bool curveSensorWhite = false;      // if the sensor is above the marker
 //---------------------------PID Control-------------------------------------
 float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
 
-float Kp = 0.472;
+float Kp = 0.412;
 float Ki = 0.0001;
 float Kd = 2.1;
 
@@ -97,6 +97,7 @@ bool endTrack = false;
 volatile long encoderValueLeft = 0; // Raw encoder value
 volatile long encoderValueRight = 0; // Raw encoder value
 bool countEnabled = true;
+int stoppingPoint = 22300;
 
 int encoderLeftPin1 = 33;   // Encoder Output 'A' for left encoder
 int encoderLeftPin2 = 32;   // Encoder Output 'B' for left encoder
@@ -241,13 +242,14 @@ void printParameters() {
 #endif
 
 void loop0(void * parameter) {
+    
     int mediaEncoder;
     for (;;) {   
       mediaEncoder = (encoderValueLeft + encoderValueRight)/2;  
-      // if (SerialBT.available()) {
-      //   SerialBT.println (mediaEncoder);
-      //   SerialBT.read();
-      // }
+      if (SerialBT.available()) {
+        SerialBT.println (mediaEncoder);
+        SerialBT.read();
+      }
       // implemaentacao temporaria usando hardcode, definimos os valores 
       // dos pontos e definimos a velocidade maxima em erro menor que a margem (forwardSpeed) 
       // e a maior velocidade em regime de PID (maxSpeed)
@@ -260,42 +262,47 @@ void loop0(void * parameter) {
       
       if ((mediaEncoder > 0) && (mediaEncoder <= 2200)){  
         maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 0 - start -> p1
-      }else if ((mediaEncoder > 2200) && (mediaEncoder <= 3300)) {        
+        forwardSpeed = 85;
+        // trecho 0 | start -> p1 | AZUL
+      }else if ((mediaEncoder > 2200) && (mediaEncoder <= 2600)) {        
         maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 1 - p1 -> p2
+        forwardSpeed = 95;
+        // trecho 1 |  p1 -> p2 | VERMELHO
+      }else if ((mediaEncoder > 2600) && (mediaEncoder <= 3300)) {        
+        maxSpeed = 100;
+        forwardSpeed = 70;
+        // trecho 2 | p1 -> p2 | CIANO
       }else if ((mediaEncoder > 3300) && (mediaEncoder <= 8900)){       
         maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 2 - p2 -> p3
-      }else if ((mediaEncoder > 8900) && (mediaEncoder <= 1700)){
-        maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 3 - p3 -> p4
+        forwardSpeed = 90;
+        // trecho 3 | p2 -> p3 | ROSA
       }else if ((mediaEncoder > 8900) && (mediaEncoder <= 15000)){
         maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 3 - p3 -> p4
-      }else if ((mediaEncoder > 8900) && (mediaEncoder <= 17000)){
+        forwardSpeed = 90;
+        // trecho 4 | p3 -> p4 | VERDE
+      }else if ((mediaEncoder > 15000) && (mediaEncoder <= 16000)){
         maxSpeed = 100;
-        forwardSpeed = 80;
-        // trecho 3 - p3 -> p4
+        forwardSpeed = 95;
+        // trecho 5 | p4 -> p5 | BRANCO
+      }else if ((mediaEncoder > 16000) && (mediaEncoder <= 17000)){
+        maxSpeed = 100;
+        forwardSpeed = 70;
+        // trecho 6 | p4 -> p5 | AMARELO
       }else if ((mediaEncoder > 17000) && (mediaEncoder <= 18500)){
         maxSpeed = 100;
-        forwardSpeed = 99;
-        // trecho 4 - p4 -> p5
-      }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22200)){
+        forwardSpeed = 95; 
+        // trecho 7 | p4 -> p5 | VERMELHO 2
+      }else if ((mediaEncoder > 18500) && (mediaEncoder <= 22050)){
         maxSpeed = 100;
-        forwardSpeed = 100;
-        // trecho 5 p5 -> end
-      }else if (mediaEncoder > 22200){
+        forwardSpeed = 95;
+        // trecho 8 | p5 -> end | LARANJA
+      }else if (mediaEncoder > stoppingPoint){
         SerialBT.print(">> end?: ");
         SerialBT.println(mediaEncoder);
         endTrack = true;
       }   
-    }                                                                                                  // Or when finds 
+    }
+                                                                                         // Or when finds 
   vTaskDelay(10);
 }
 
@@ -427,6 +434,8 @@ void setup()
       marginError = getNumber(btMessage, 1);
     } else if (prefix == "pri") {
       printParameters();
+    } else if (prefix == "sto") {
+      stoppingPoint = getNumber(btMessage, 1);
     } else if (prefix == "end") {
       break;
     } else if (prefix == "lim"){
