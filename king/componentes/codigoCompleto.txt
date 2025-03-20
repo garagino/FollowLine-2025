@@ -1,0 +1,555 @@
+#include "Arduino.h"          // Library for the task manager
+#include "BluetoothSerial.h"  // Library for the Buetooth module
+#include <QTRSensors.h>       // Library for the QTR-8A or the QTR-8RC
+
+// Dual core tasks 
+TaskHandle_t Task0;
+TaskHandle_t Task1;
+
+//----------------------- Bluetooth ---------------------
+// Defines Device's Bluetooth name
+#define DEBUG
+#define BT_NAME "KNGG"
+#ifdef DEBUG
+
+// Makes sure bluetooth is working
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run make menuconfig to and enable it
+#endif
+BluetoothSerial SerialBT;  // Bluetooth Serial instance
+#endif
+
+//----------------------- Controller ----------------------
+
+QTRSensors qtr;     // QTR Sensor
+
+// Set button and led pins
+const uint8_t BUTTON_PIN = 32;  // Updated button pin
+const uint8_t PIN_MARKER_SENSOR = 35;
+
+//----------------------- QTR Sensors ----------------------
+// Setup of the module of sensors
+const uint8_t SENSOR_COUNT = 8;       // The number of sensors, which should match the length of the pins array
+uint16_t sensorValues[SENSOR_COUNT];  // An array in which to store the calibrated sensor readings
+
+// Maximum line position, considering the amount of sensors.
+const long MAX_POSITION = (SENSOR_COUNT - 1) * 1000;
+
+// Marker sensor variables
+unsigned long startMakerChecker = 39500L;
+unsigned long initialTime;
+
+// Limit value of the margin of error
+int marginError = 20;
+bool firstRun = true;
+
+// QTR control for if it is above black
+const bool LINE_BLACK = false;
+
+//-----------------------Curve Sensor----------------------
+#define SENSOR_PIN_1 34   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
+#define SENSOR_PIN_2 33   // Pino ADC para o sensor de linha (deve ser um pino analógico do ESP32)
+
+int curveCount = 0;                 // Curve counter
+bool curveSensorWhite = false;      // if the sensor is above the marker
+
+typedef struct curveController {    // Struct for every curve separator
+  int velocity;                     // Speed for this curve
+  int breakerStrength;              // Braking strength (reverse)
+  int timeBreaking;                 // time on reverse
+  int distanceToBreak;              // Distancia determinada para freias
+} CurveController; 
+
+// Sets the number of curves
+CurveController curvesDistance[60] = {
+  {80, 0,0, 544},  {80, 0, 0, 664}, {80, 0, 0, 1709}, {80, 0, 0, 1793},
+  {80, 0,0, 1894}, {80, 0, 0, 1988}, {80, 0, 0, 2067}, {80, 0, 0, 2233},
+  {80, 0,0, 2311}, {80, 0, 0, 2478}, {80, 0, 0, 2548}, {80, 0, 0, 2660},
+  {80, 0,0, 2768}, {80, 0, 0, 3200}, {80, 0, 0, 3404}, {80, 0, 0, 3569},
+  {80, 0,0, 3754}, {80, 0, 0, 3876}, {80, 0, 0, 3932}, {80, 0, 0, 4038},
+  {80, 0,0, 4098}, {80, 0, 0, 4274}, {80, 0, 0, 4364}, {80, 0, 0, 4565},
+  {80, 0,0, 4702}, {80, 0, 0, 4870}, {80, 0, 0, 4983}, {80, 0, 0, 5036},
+  {80, 0,0, 5121}, {80, 0, 0, 5474}, {80, 0, 0, 5660}, {80, 0, 0, 5836},
+  {80, 0,0, 5985}, {80, 0, 0, 6520}, {80, 0, 0, 6737}, {80, 0, 0, 7125},
+  {80, 0,0, 7371}, {80, 0, 0, 7458}, {80, 0, 0, 7726}, {80, 0, 0, 7998},
+  {80, 0,0, 8399}, {80, 0, 0, 8513}, {80, 0, 0, 8582}, {80, 0, 0, 8842},
+  {80, 0,0, 9301}, {80, 0, 0, 0}, {80, 0, 0, 0}, {80, 0, 0, 0},
+  {80, 0,0, 0}, {80, 0, 0, 0}, {80, 0, 0, 0}, {80, 0, 0, 0},
+  {80, 0,0, 0}, {80, 0, 0, 0}, {80, 0, 0, 0}, {80, 0, 0, 0}
+};
+
+int curvesSetupIndex = 0;                                             // Counter for setting up curvesDistances in prefix menu
+int curvesRacingIndex = 0;                                            // Counter for curvesDistances when racing
+int breakingTime = 0;                                                  // Used at breaker(), doing this so the program doesn't need to alloc every time the function is called
+
+//---------------------------PID Control-------------------------------------
+float p = 0, i = 0, d = 0, pid = 0, error = 0, lastError = 0;
+
+float Kp = -0.1;
+float Ki = 0.0001;
+float Kd = 0.7;
+
+// O turnSpeed virou forwardSpeed por motivos de coesão e coerência com o código. Prefixo 'for'.
+int forwardSpeed = 56;
+int maxSpeed = 100;
+int integralLimit = 200;
+int lSpeed, rSpeed;
+
+bool limiter = true;
+
+//------------------Encoder-------------------
+volatile long encoderValueLeft = 0; // Raw encoder value
+volatile long encoderValueRight = 0; // Raw encoder value
+bool countEnabled = true;
+
+float distanceMotor;
+float distance = 565;
+float distanceAverage;
+float multEncoder = 1;
+
+// Todas as portas da esp32 suportam interrupt, estou chutando que essas portas vão funcionar
+int encoderLeftPin1 = 36; //Encoder Output 'A' must connected with interrupt pin of arduino.
+int encoderLeftPin2 = 39; //Encoder Output 'B' must connected with interrupt pin of arduino.
+
+int encoderRightPin1 = 15; //Encoder Output 'A' must connected with interrupt pin of arduino.
+int encoderRightPin2 = 4; //Encoder Output 'B' must connected with interrupt pin of arduino.
+
+int markersDistance[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  //
+int markersSetupIndex = 0;
+int markersRacingIndex = 0;
+
+bool enableCount = true; 
+
+// Motor control pins
+#define INP1 14
+#define INP2 27
+#define ENA 13
+
+#define INP3 26
+#define INP4 25
+#define ENB 12
+
+void setup();
+void loop();
+int readSensors();
+bool markerChecker();
+void updateEncoder();
+void updateRightEncoder();
+void updateLeftEncoder();
+void breaker(int MillisOnReverse, int strength);
+void moveForward(int speed);
+void moveBackward(int speed);
+void turnMotors(int leftSpeed, int rightSpeed);
+void stopMotors();
+String receiveBtMessage();
+String getPrefix(String data);
+double getNumber(String data, int index);
+String getElement(String data, int index);
+#ifdef DEBUG
+void printParameters();
+void loop0(void * parameter);
+void loop1(void * parameter);
+#endif
+
+void setup() {
+#ifdef DEBUG
+  if (firstRun) {
+    Serial.begin(115200);
+    delay(100);
+
+    SerialBT.begin(BT_NAME);  // Bluetooth device name
+    firstRun = false;
+  }
+
+  SerialBT.println("Start BT communication");
+
+  String btMessage;
+  String prefix;
+
+  while (prefix != "end" && digitalRead(BUTTON_PIN) == HIGH) {
+    btMessage = receiveBtMessage();
+    prefix = getPrefix(btMessage);
+
+    if (prefix == "pid") {
+      Kp = getNumber(btMessage, 1);
+      Ki = getNumber(btMessage, 2);
+      Kd = getNumber(btMessage, 3);
+    } else if (prefix == "spe") {
+      maxSpeed = getNumber(btMessage, 1);
+    } else if (prefix == "mrk"){
+        markersDistance[markersSetupIndex] = getNumber(btMessage, 1);
+        markersSetupIndex++;
+    }else if (prefix == "for") {
+      forwardSpeed = getNumber(btMessage, 1);
+    } else if (prefix == "tim") {
+      startMakerChecker = getNumber(btMessage, 1);
+    } else if (prefix == "err") {
+      marginError = getNumber(btMessage, 1);
+    } else if (prefix == "pri") {
+      printParameters();
+    } else if (prefix == "end") {
+      break;
+    } else if (prefix == "lim"){
+      limiter = !limiter;
+      SerialBT.println(limiter ? "Limiter ativado!" : "Limiter desativado!");
+    } else {
+      SerialBT.println("This command doesn't exist!");
+    }
+  }
+
+  printParameters();
+
+  SerialBT.println("Start Calibration...");
+
+  delay(500);
+#endif
+
+  Serial.begin(115200);
+	Serial.println("Setup started.");
+
+	xTaskCreatePinnedToCore(
+			loop0, /* Function to implement the task */
+			"Task0", /* Name of the task */
+			1000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			&Task0, /* Task handle. */
+			0); /* Core where the task should run */
+
+	xTaskCreatePinnedToCore(
+			loop1, /* Function to implement the task */
+			"Task1", /* Name of the task */
+			2000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			&Task1, /* Task handle. */
+			1); /* Core where the task should run */
+
+	Serial.println("Setup completed.");
+
+  // Suspends both Tasks to start after the calibration state
+  vTaskSuspend(Task0); 
+  vTaskSuspend(Task1);
+
+  // Setup QTR sensors
+  qtr.setTypeRC();
+  qtr.setSensorPins((const uint8_t[]){16, 17, 5, 18, 19, 21, 22, 23}, SENSOR_COUNT);
+
+  // Setup button and LED pins
+  pinMode(BUTTON_PIN, INPUT_PULLDOWN);  // Updated button pin setup
+  pinMode(PIN_MARKER_SENSOR, INPUT);
+  //pinMode(PIN_LED, OUTPUT);
+
+  // Setup motor control pins
+  pinMode(INP1, OUTPUT);
+  pinMode(INP2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(INP3, OUTPUT);
+  pinMode(INP4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+  // Initialize motors to stopped state
+  digitalWrite(INP1, LOW);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 0);
+  digitalWrite(INP3, LOW);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 0);
+
+  // Setup encoder pins
+  pinMode(encoderLeftPin1, INPUT_PULLUP); 
+  pinMode(encoderLeftPin2, INPUT_PULLUP);
+  pinMode(encoderRightPin1, INPUT_PULLUP); 
+  pinMode(encoderRightPin2, INPUT_PULLUP);
+
+  digitalWrite(encoderLeftPin1, HIGH); //turn pullup resistor on
+  digitalWrite(encoderLeftPin2, HIGH); //turn pullup resistor on
+
+  digitalWrite(encoderRightPin1, HIGH); //turn pullup resistor on
+  digitalWrite(encoderRightPin2, HIGH); //turn pullup resistor on
+
+  attachInterrupt(digitalPinToInterrupt(encoderLeftPin1), updateLeftEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(encoderRightPin1), updateRightEncoder, CHANGE);
+
+  // Calibration
+  //digitalWrite(PIN_LED, HIGH);
+  while (digitalRead(BUTTON_PIN) == HIGH) {  // Updated button pin usage
+    qtr.calibrate();
+    encoderValueLeft = 0;  // encoder goes to 0 after a run beggins
+    encoderValueRight = 0;  // encoder goes to 0 after a run beggins
+  }
+  //digitalWrite(PIN_LED, LOW);
+
+#ifdef DEBUG
+  // Print the calibration minimum values measured when emitters were on
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    SerialBT.print(qtr.calibrationOn.minimum[i]);
+    SerialBT.print(' ');
+  }
+  SerialBT.println();
+
+  // Print the calibration maximum values measured when emitters were on
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    SerialBT.print(qtr.calibrationOn.maximum[i]);
+    SerialBT.print(' ');
+  }
+  SerialBT.println();
+#endif
+
+  delay(2000);  // Start loop after 2 seconds
+  initialTime = millis();
+
+  vTaskResume(Task0);
+  vTaskResume(Task1);
+}
+
+void loop() {
+  delay(1);
+}
+
+void loop0(void * parameter) {
+  for (;;) {
+    // Encoder distance calculation
+    distanceMotor = (encoderValueLeft + encoderValueRight) * multEncoder;
+    distanceAverage = distanceMotor / 2.0;
+
+    // Curve sensor reading
+    if ((analogRead(SENSOR_PIN_1) < 3000) || (analogRead(SENSOR_PIN_2) < 3000)) {
+      if (!curveSensorWhite) {
+        curveCount++;
+        SerialBT.println(curveCount);  
+        maxSpeed = curvesDistance[curveCount].velocity;
+        if (curvesDistance[curveCount].timeBreaking != 0) {
+          breaker(curvesDistance[curveCount].timeBreaking, curvesDistance[curveCount].breakerStrength);
+        }
+        SerialBT.println(curveCount);
+      }
+      curveSensorWhite = true;
+    } else {
+      curveSensorWhite = false;
+    }
+
+    if (SerialBT.available()) {
+      SerialBT.println(distanceAverage);
+      SerialBT.read();
+    }
+
+    if (curvesDistance[curvesRacingIndex].distanceToBreak < distanceAverage && curvesDistance[curvesRacingIndex].distanceToBreak != 0) { 
+      maxSpeed = curvesDistance[curvesRacingIndex].velocity;
+      SerialBT.println("breaking");
+      countEnabled = false;
+      breaker(curvesDistance[curvesRacingIndex].timeBreaking, curvesDistance[curvesRacingIndex].breakerStrength);
+      countEnabled = true;
+      curvesRacingIndex++;
+    }
+
+    vTaskDelay(10);
+  }
+}
+
+void loop1(void * parameter) {
+  for (;;) {
+    // Read sensors and calculate error
+    error = map(readSensors(), 0, MAX_POSITION, -1000, 1000);
+
+    // Calculate PID
+    p = error;
+    i += error;
+    if (limiter) {
+      i = constrain(i, -integralLimit, integralLimit);
+    }
+    d = error - lastError;
+    pid = (Kp * p) + (Ki * i) + (Kd * d);
+    lastError = error;
+
+    // Control motors
+    lSpeed = maxSpeed + pid;
+    rSpeed = maxSpeed - pid;
+    lSpeed = constrain(lSpeed, -maxSpeed, maxSpeed);
+    rSpeed = constrain(rSpeed, -maxSpeed, maxSpeed);
+
+    if (markerChecker()) {
+      stopMotors();
+      setup();
+    } else if (abs(error) <= marginError) {
+      moveForward(forwardSpeed);
+    } else {
+      turnMotors(lSpeed, rSpeed);
+    }
+
+    vTaskDelay(10);
+  }
+}
+
+int readSensors() {
+  if (LINE_BLACK) {
+    return qtr.readLineBlack(sensorValues);
+  } else {
+    return qtr.readLineWhite(sensorValues);
+  }
+}
+
+bool markerChecker() {
+  if (startMakerChecker < millis() - initialTime) {
+    if (analogRead(PIN_MARKER_SENSOR) < 2000) {
+      for (int i = 0; i < 10000; i++) {
+        moveBackward(50);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+void updateEncoder() {
+  encoderValueLeft++;
+  encoderValueRight++;
+}
+
+void updateRightEncoder() {
+  if (digitalRead(encoderRightPin1) == digitalRead(encoderRightPin2)) {
+    encoderValueRight++;
+  } else {
+    encoderValueRight--;
+  }
+}
+
+void updateLeftEncoder() {
+  if (digitalRead(encoderLeftPin1) == digitalRead(encoderLeftPin2)) {
+    encoderValueLeft++;
+  } else {
+    encoderValueLeft--;
+  }
+}
+
+void breaker(int MillisOnReverse, int strength) {
+  breakingTime = millis();
+  while ((millis() - breakingTime) < MillisOnReverse) {
+    moveBackward(strength);
+  }
+}
+
+void moveForward(int speed) {
+  digitalWrite(INP1, HIGH);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, speed);
+  digitalWrite(INP3, HIGH);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, speed);
+}
+
+void moveBackward(int speed) {
+  digitalWrite(INP1, LOW);
+  digitalWrite(INP2, HIGH);
+  analogWrite(ENA, speed);
+  digitalWrite(INP3, LOW);
+  digitalWrite(INP4, HIGH);
+  analogWrite(ENB, speed);
+}
+
+void turnMotors(int leftSpeed, int rightSpeed) {
+  if (leftSpeed >= 0) {
+    digitalWrite(INP1, HIGH);
+    digitalWrite(INP2, LOW);
+    analogWrite(ENA, leftSpeed);
+  } else {
+    digitalWrite(INP1, LOW);
+    digitalWrite(INP2, HIGH);
+    analogWrite(ENA, -leftSpeed);
+  }
+
+  if (rightSpeed >= 0) {
+    digitalWrite(INP3, HIGH);
+    digitalWrite(INP4, LOW);
+    analogWrite(ENB, rightSpeed);
+  } else {
+    digitalWrite(INP3, LOW);
+    digitalWrite(INP4, HIGH);
+    analogWrite(ENB, -rightSpeed);
+  }
+}
+
+void stopMotors() {
+  digitalWrite(INP1, LOW);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 0);
+  digitalWrite(INP3, LOW);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 0);
+}
+
+String receiveBtMessage() {
+  String message;
+  char incomingChar;
+
+  //digitalWrite(PIN_LED, HIGH);
+  while (digitalRead(BUTTON_PIN) == HIGH) {  // Updated button pin usage
+    if (SerialBT.available()) {
+      incomingChar = SerialBT.read();
+      if (incomingChar == '\n') break;
+      message += String(incomingChar);
+    }
+  }
+  //digitalWrite(PIN_LED, LOW);
+  message.trim();
+  return message;
+}
+
+String getPrefix(String data) {
+  return getElement(data, 0);
+}
+
+double getNumber(String data, int index) {
+  return atof(getElement(data, index).c_str());
+}
+
+String getElement(String data, int index) {
+  char separator = ' ';
+  int found = 0;
+  int startIndex = 0, endIndex = -1;
+  int maxIndex = data.length() - 1;
+
+  for (int i = 0; i <= maxIndex && found <= index; i++) {
+    if (data.charAt(i) == separator || i == maxIndex) {
+      found++;
+      startIndex = endIndex + 1;
+      endIndex = (i == maxIndex) ? i + 1 : i;
+    }
+  }
+
+  if (found <= index) {
+    return "";
+  }
+
+  return data.substring(startIndex, endIndex);
+}
+
+#ifdef DEBUG
+
+void printParameters() {
+  SerialBT.println("Configured parameters:");
+  SerialBT.print(">> P: ");
+  SerialBT.print(Kp, 4);
+  SerialBT.print(" | I: ");
+  SerialBT.print(Ki, 4);
+  SerialBT.print(" | Kd: ");
+  SerialBT.println(Kd, 4);
+
+  SerialBT.print(">> Speed: ");
+  SerialBT.println(maxSpeed);
+
+  SerialBT.print(">> Time delay: ");
+  SerialBT.println(startMakerChecker);
+
+  SerialBT.print(">> Margin Error: ");
+  SerialBT.println(marginError);
+
+  SerialBT.print(">> Limitador: ");
+  SerialBT.println(limiter);
+
+  SerialBT.print(">> Forward Speed: ");
+  SerialBT.println(forwardSpeed);
+}
+
+#endif
+

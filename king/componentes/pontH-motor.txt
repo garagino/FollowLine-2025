@@ -1,0 +1,65 @@
+#include <Arduino.h>
+
+// Pinos para o Motor A
+#define INP1 27  // Pino de controle 1 (Motor A)
+#define INP2 14  // Pino de controle 2 (Motor A)
+#define ENA  13  // Pino PWM para controle de velocidade (Motor A)
+
+// Pinos para o Motor B
+#define INP3 25  // Pino de controle 1 (Motor B)
+#define INP4 26  // Pino de controle 2 (Motor B)
+#define ENB  12  // Pino PWM para controle de velocidade (Motor B)
+
+void setup() {
+  // Inicializa o Monitor Serial
+  Serial.begin(115200);
+
+  // Configura os pinos de controle como saída
+  pinMode(INP1, OUTPUT);
+  pinMode(INP2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  
+  pinMode(INP3, OUTPUT);
+  pinMode(INP4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+  // Inicializa os pinos de controle para os motores parados
+  digitalWrite(INP1, LOW);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 0);  // Motor A parado inicialmente
+  
+  digitalWrite(INP3, LOW);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 0);  // Motor B parado inicialmente
+}
+
+void loop() {
+  // Gira o Motor A para frente com 100% de velocidade
+  digitalWrite(INP1, HIGH);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 255);  // 100% do ciclo de trabalho
+  // Gira o Motor B para trás com 75% de velocidade
+  digitalWrite(INP3, HIGH);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 255);  // 75% do ciclo de trabalho
+  delay(5000);  // Aguarda 5 segundos
+
+  digitalWrite(INP1, HIGH);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 100);  // 100% do ciclo de trabalho
+  // Gira o Motor B para trás com 75% de velocidade
+  digitalWrite(INP3, HIGH);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 100);  // 75% do ciclo de trabalho
+
+  delay(5000);  // Aguarda 5 segundos
+  // Para ambos os motores
+  digitalWrite(INP1, LOW);
+  digitalWrite(INP2, LOW);
+  analogWrite(ENA, 0);
+
+  digitalWrite(INP3, LOW);
+  digitalWrite(INP4, LOW);
+  analogWrite(ENB, 0);
+  delay(5000);  // Aguarda 2 segundos
+}

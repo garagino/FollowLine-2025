@@ -1,0 +1,61 @@
+#include <Arduino.h>
+#include <QTRSensors.h>
+
+QTRSensors qtr;
+
+const uint8_t SensorCount = 8;
+uint16_t sensorValues[SensorCount];
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // Configura os sensores
+  qtr.setTypeRC(); 
+  qtr.setSensorPins((const uint8_t[]){16, 17, 5, 18, 19, 21, 22, 23}, SensorCount);
+  qtr.setTimeout(3000); // Ajusta o timeout para 3000 µs
+  // qtr.setEmitterPin(4); // Comente se o emissor não for usado
+
+  delay(500);
+
+  // Processo de calibração
+  printf("Iniciando calibração...\n");
+  for (uint16_t i = 0; i < 400; i++)
+  {
+    qtr.calibrate();
+    if (i % 50 == 0)
+      printf("Calibração em andamento: %d/400\n", i);
+  }
+  printf("Calibração concluída.\n");
+
+  // Imprime os valores mínimos de calibração
+  printf("Calibration Minimums:\n");
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    printf("%d ", qtr.calibrationOn.minimum[i]);
+  }
+  printf("\n");
+
+  // Imprime os valores máximos de calibração
+  printf("Calibration Maximums:\n");
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    printf("%d ", qtr.calibrationOn.maximum[i]);
+  }
+  printf("\n\n");
+
+  delay(1000);
+}
+
+void loop()
+{
+  uint16_t position = qtr.readLineWhite(sensorValues);
+
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    printf("Sensor %d: %d\t", i, sensorValues[i]);
+  }
+  printf("Position: %d\n", position);
+
+  delay(250);
+}

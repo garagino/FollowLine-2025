@@ -1,0 +1,35 @@
+#include <Arduino.h>
+
+// Define o pino do botão
+#define BUTTON_PIN 32  // Substitua pelo pino em que o botão está conectado
+
+// Variável para armazenar o estado do botão
+bool buttonState = false;
+
+void setup() {
+  // Inicializa a comunicação serial para depuração
+  Serial.begin(115200);
+
+  // Configura o pino do botão como entrada com pull-up interno
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  Serial.println("Iniciando leitura do botão...");
+}
+
+void loop() {
+  // Lê o estado do botão (LOW = pressionado, HIGH = liberado)
+  bool currentState = digitalRead(BUTTON_PIN) == LOW;
+
+  // Detecta quando o botão é pressionado
+  if (currentState != buttonState) {  // Houve uma mudança no estado do botão
+    buttonState = currentState;
+
+    if (buttonState) {
+      Serial.println("Botão pressionado!");
+    } else {
+      Serial.println("Botão liberado!");
+    }
+  }
+
+  delay(50);  // Debounce: evita leituras falsas causadas por ruído mecânico
+}

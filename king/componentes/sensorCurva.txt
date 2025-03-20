@@ -1,0 +1,27 @@
+#include <Arduino.h>
+
+// Define o pino do sensor lateral
+#define SENSOR_LATERAL_CURVA_PIN 34
+
+void setup() {
+  // Inicializa a comunicação serial para depuração
+  Serial.begin(115200);
+
+  // Configura o pino do sensor como entrada (não necessário para analógicos, mas é boa prática)
+  pinMode(SENSOR_LATERAL_CURVA_PIN, INPUT);
+
+  Serial.println("Iniciando leitura do sensor lateral...");
+}
+
+void loop() {
+  // Lê o valor analógico do sensor
+  int sensorValue = analogRead(SENSOR_LATERAL_CURVA_PIN);
+
+  // Exibe o valor bruto e a porcentagem no Monitor Serial
+  Serial.print("Sensor Curva: ");
+  Serial.print(sensorValue);
+  Serial.print("\n");
+
+
+  delay(200);  // Aguarda 500 ms antes da próxima leitura
+}
